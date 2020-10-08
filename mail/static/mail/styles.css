@@ -1,0 +1,7 @@
+textarea {
+    min-height: 400px;
+}
+
+.list-group-item-action:hover {
+  cursor: pointer;
+}
