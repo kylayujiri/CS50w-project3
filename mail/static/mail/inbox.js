@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 });
 
+
 function compose_email(isReply, email) {
 
   // Show compose view and hide other views
@@ -31,6 +32,7 @@ function compose_email(isReply, email) {
 
     document.querySelector('#compose-body').value = `\n\nOn ${email.timestamp}, ${email.sender} wrote:\n${email.body}`;
 
+  // otherwise it is just a blank compose form
   } else {
 
     // Clear out composition fields
@@ -45,7 +47,7 @@ function compose_email(isReply, email) {
   errorDiv.className = "";
   errorDiv.innerHTML = "";
 
-  // Send email via POST
+  // Send email via POST if form is submitted
   document.querySelector('#compose-form').onsubmit = event => {
     event.preventDefault();
 
@@ -68,32 +70,38 @@ function compose_email(isReply, email) {
       // print result
       console.log(result);
 
+      // if form had errors, display them
       if (result.error !== undefined) {
         errorDiv.className = "alert alert-danger";
         errorDiv.innerText = result.error;
+
+      // otherwise, load the sent mailbox
       } else {
         load_mailbox('sent')
       }
+
     });
 
   }
 }
 
+
+// load inbox, sent, or archive
 function load_mailbox(mailbox) {
 
-  // Show the mailbox and hide other views
+  // Show the mailbox and hide other viewßs
   document.querySelector('#emails-view').style.display = 'block';
   document.querySelector('#compose-view').style.display = 'none';
   document.querySelector('#email-view').style.display = 'none';
-
-  // Show the mailbox name
-  document.querySelector('#emails-view').innerHTML = `<h3>${mailbox.charAt(0).toUpperCase() + mailbox.slice(1)}</h3>`;
 
   // clear #emails-view
   const emailsView = document.querySelector('#emails-view');
   while (emailsView.hasChildNodes()) {
     emailsView.removeChild(emailsView.firstChild);
   }
+
+  // Show the mailbox name
+  document.querySelector('#emails-view').innerHTML = `<h3>${mailbox.charAt(0).toUpperCase() + mailbox.slice(1)}</h3>`;
 
   // Query the API for the mailbox
   fetch(`/emails/${mailbox}`)
@@ -108,10 +116,15 @@ function load_mailbox(mailbox) {
 
 }
 
+
+// displays emails (for mailboxes)
 function display_emails(contents, mailbox) {
+
+  // create the element for the email
   const email = document.createElement('a');
   email.className = 'email list-group-item list-group-item-action';
 
+  // determine if it should be white or gray (unread or read)
   if (contents.read === true) {
     // Makes the list item gray if it has been read already
     email.classList.add("list-group-item-secondary");
@@ -120,31 +133,40 @@ function display_emails(contents, mailbox) {
     email.classList.remove("list-group-item-secondary");
   }
 
+  // create elements for inside the email
   const innerDiv = document.createElement('div');
-  const item1 = document.createElement('div');
-  const item2 = document.createElement('div');
-  const item3 = document.createElement('div');
+  const senderDiv = document.createElement('div');
+  const subjectDiv = document.createElement('div');
+  const timestampDiv = document.createElement('div');
 
   innerDiv.className = 'd-flex w-100 justify-content-between';
-  item1.className = 'p-2';
-  item2.className = 'p-2';
-  item3.className = 'ml-auto p-2';
+  senderDiv.className = 'p-2';
+  subjectDiv.className = 'p-2';
+  // we want the timestamp to be on the right
+  timestampDiv.className = 'ml-auto p-2';
 
-  item1.innerHTML = `<strong>${contents.sender}</strong>`;
-  item2.innerHTML = `${contents.subject}`;
-  item3.innerHTML = `<small class='text-muted'>${contents.timestamp}</small>`;
+  // add the content to the divs
+  senderDiv.innerHTML = `<strong>${contents.sender}</strong>`;
+  subjectDiv.innerHTML = `${contents.subject}`;
+  timestampDiv.innerHTML = `<small class='text-muted'>${contents.timestamp}</small>`;
 
-  innerDiv.append(item1);
-  innerDiv.append(item2);
-  innerDiv.append(item3);
+  // add the divs with the content to innerDiv
+  innerDiv.append(senderDiv);
+  innerDiv.append(subjectDiv);
+  innerDiv.append(timestampDiv);
 
+  // add innerDiv to the overall email element
   email.append(innerDiv);
 
-  email.onclick = () => display_email(contents, mailbox);
-
+  // add the email to #emails-view
   document.querySelector('#emails-view').append(email);
+
+  // if the user clicks on the email, display the email details
+  email.onclick = () => display_email(contents, mailbox);
 }
 
+
+// display the details of a single email
 function display_email(contents, mailbox) {
 
   // Show the email views and hide the others
@@ -161,12 +183,15 @@ function display_email(contents, mailbox) {
   // modify the archive button based on the mailbox
   const archiveButton = document.querySelector('#archive');
   if (mailbox === 'sent') {
+    // no archive button for sent emails
     archiveButton.innerHTML = "Archive";
     archiveButton.style.display = 'none';
   } else if (mailbox === 'archive') {
+    // if an email is already archived, show "Unarchive"
     archiveButton.innerHTML = "Unarchive";
     archiveButton.style.display = 'inline';
   } else {
+    // mailbox is inbox so show "Archive"
     archiveButton.innerHTML = "Archive";
     archiveButton.style.display = 'inline';
   }
@@ -192,29 +217,32 @@ function display_email(contents, mailbox) {
   replyButton.onclick = () => compose_email(true, contents);
 
   // get the email info so we can display it
-  // could we possibly just use the info in contents?
+  // (possible change: could we possibly just use the info in contents?)
   fetch(`emails/${contents.id}`)
   .then(response => response.json())
   .then(email => {
     // print email to console
     console.log(email);
 
-    // display email in email-view div
+    // create elements for the email details in the email header
     const fromPar = document.createElement('p');
     const toPar = document.createElement('p');
     const subjectPar = document.createElement('p');
     const timestampPar = document.createElement('p');
 
+    // add the content to the elements
     fromPar.innerHTML = `<strong>From:</strong> ${email.sender}`;
     toPar.innerHTML = `<strong>To:</strong> ${email.recipients}`;
     subjectPar.innerHTML = `<strong>Subject:</strong> ${email.subject}`;
     timestampPar.innerHTML = `<strong>Timestamp:</strong> ${email.timestamp}`;
 
+    // add the content elements to the emailHeader div (referenced earlier in the func)
     emailHeader.append(fromPar);
     emailHeader.append(toPar);
     emailHeader.append(subjectPar);
     emailHeader.append(timestampPar);
 
+    // add the contents of the email body to the email body div
     document.querySelector('#email-body').innerText = `${email.body}`;
 
     // mark email as read
